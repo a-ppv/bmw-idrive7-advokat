@@ -645,6 +645,27 @@ async function mgFlasherChecks() {
     assert.strictEqual(busy.tune.noteType, 'warn');
     assert.strictEqual(busy.tune.map, 2, 'a map the busy DME never took was recorded');
 
+    // The Custom Code's own refusals are named: NRC 69 invalid DID or data, NRC 96 incorrect checksum.
+    const bad = await setup('mgreal', 'mgflasher');
+    bad.d.link.sendToDme = async () => ({ ok: false, nrc: 0x69, reason: 'NRC 69' });
+    await bad.tune.setBurbleSlot(2);
+    assert.strictEqual(bad.tune.note, 'Not available on this car (NRC 69 · invalid DID or data)');
+    assert.strictEqual(bad.tune.burbles, null);
+    bad.d.link.sendToDme = async () => ({ ok: false, nrc: 0x96, reason: 'NRC 96' });
+    await bad.tune.setCooling(true);
+    assert.strictEqual(bad.tune.note, 'Not available on this car (NRC 96 · incorrect checksum)');
+
+    // Every request and the DME's answer is written to the app log (a refusal, a busy retry, a good press).
+    const lines = [];
+    const logged = new CommandDriver(MG_FLASHER, dme('mgreal').link, { info: (m) => lines.push(m), warn() {} });
+    await logged.setMap(3);
+    assert.deepStrictEqual(lines, ['MG Flasher > 2e 69 45 02 b0', 'MG Flasher < 6e 69 45']);
+    lines.length = 0;
+    logged.link.sendToDme = async () => ({ ok: false, nrc: 0x69, reason: 'NRC 69' });
+    await assert.rejects(() => logged.setCooling(true), /NRC 69/);
+    assert.strictEqual(lines[0], 'MG Flasher > 2e 69 47 01 b1');
+    assert.strictEqual(lines[1], 'MG Flasher < NRC 69');
+
     // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
     const plain = await setup('stock', 'mgflasher');
     await plain.tune.setMap(2);

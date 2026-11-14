@@ -4,6 +4,15 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.12.0
+
+- **Every diagnostic request and reply is logged.** For MG Flasher and MHD the app log gets one line per request and per
+  reply, for example `MG Flasher > 2e 69 45 02 b0` then `MG Flasher < 6e 69 45`, or `MG Flasher < NRC 69` for a refusal,
+  so a failed press can be analysed from the log alone.
+- **NRC names.** MG Flasher refusals name the code: NRC 69 reads "invalid DID or data", NRC 96 "incorrect checksum".
+- **Startup line.** The log starts with the app version and the chosen tuning software.
+- **Log size.** The app log rotates at 25 MB and keeps one old copy (`.log.1`), so the two files stay within 50 MB.
+
 ## 10.11.0
 
 - **A refusal from the DME shows its code.** "Not available on this car" now reads "Not available on this car (NRC 31)"

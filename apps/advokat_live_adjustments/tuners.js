@@ -39,6 +39,7 @@ const NONE = { map: false, cooling: false, burbles: false, asd: false };
  *   burbles  { slots, request(slot) -> { sid, data } }            slot = 0..slots-1
  *   ack      optional (reply, req) -> bool; the default is the DME echoing the request (sid + 0x40, the data)
  *   retry    optional { nrc, times, delayMs }: ask again while the DME answers this negative response code
+ *   nrcNames optional { <nrc>: 'text' }: named in the refusal shown on screen
  *   identify optional { request() -> { sid, data }, parse(reply) -> text }   throws when this is not the tune
  *   read     optional { request() -> { sid, data }, parse(reply) -> { map, burbles, cooling, validMaps, validBurbles } }
  *            with it, a setting is read back after it is sent and the screen says "confirmed"
@@ -74,6 +75,8 @@ const MG_FLASHER = {
     // 6E + the DID (the value and checksum are not echoed)
     ack: (r, q) => r.sid === 0x6E && r.data && r.data[0] === q.data[0] && r.data[1] === q.data[1],
     retry: { nrc: 0x21, times: 20, delayMs: 200 },
+    // the Custom Code's own refusals: the app names the status words 0x6969 and 0x9696 (CustomCode_WBDI_*) the same way
+    nrcNames: { 0x69: 'invalid DID or data', 0x96: 'incorrect checksum' },
     identify: null,    // the Custom Code version: not known how the app reads it
     read: null,        // the active slot / validity: RAM addresses from the A2L, not known here
 };
@@ -100,18 +103,27 @@ class CommandDriver {
         if (!c || !c.request) throw new Error(this.label + ': commands not configured yet');
         if (!this.verified) throw new Error(this.label + ': DME not identified');
         const req = c.request(value);
-        let r = await this.link.sendToDme(req.sid, req.data);
+        // every request and the DME's answer go to the app log, so a refused or odd press can be read back
+        const sendOnce = async () => {
+            this.log.info(this.label + ' > ' + DME_HEX([req.sid].concat(req.data)));
+            const reply = await this.link.sendToDme(req.sid, req.data);
+            this.log.info(this.label + ' < ' + (!reply ? 'no reply' : reply.ok ? DME_HEX([reply.sid].concat(reply.data || []))
+                : reply.nrc != null ? 'NRC ' + reply.nrc.toString(16).toUpperCase().padStart(2, '0') : String(reply.reason || 'failed')));
+            return reply;
+        };
+        let r = await sendOnce();
         const retry = this.spec.retry;     // the DME is busy (NRC 0x21): ask again, as the tune's own app does
         for (let i = 0; retry && r && r.nrc === retry.nrc && i < retry.times; i++) {
             await new Promise((done) => setTimeout(done, retry.delayMs));
-            r = await this.link.sendToDme(req.sid, req.data);
+            r = await sendOnce();
         }
         const ack = this.spec.ack || ((reply, q) => reply.sid === q.sid + 0x40 && reply.data && reply.data.length >= q.data.length
             && q.data.every((b, i) => reply.data[i] === b));
         if (r && r.ok && ack(r, req)) return r;
         if (r && r.nrc != null) {
             this.log.info('tune: DME refused ' + req.sid.toString(16).toUpperCase() + ' ' + DME_HEX(req.data) + ' (' + r.reason + ')');
-            throw new Error('Not available on this car (NRC ' + r.nrc.toString(16).toUpperCase().padStart(2, '0') + ')');
+            const name = this.spec.nrcNames && this.spec.nrcNames[r.nrc];
+            throw new Error('Not available on this car (NRC ' + r.nrc.toString(16).toUpperCase().padStart(2, '0') + (name ? ' · ' + name : '') + ')');
         }
         throw new Error('No answer from the DME');
     }

@@ -37,13 +37,14 @@ const RHMI_RES = path.join(APP_ROOT, 'rhmiData', 'resources');
 
 /* ---------------- logging: SDK logger (DLT) + small rotating file ---------------- */
 const LOG_FILE = path.join(DATA_DIR, SPEC.id + '.log');
+const LOG_MAX = 25 * 1024 * 1024;   // the file and its one rotated copy (.1) stay within 50 MB together
 const RUN_TAG = Date.now().toString(36);
 // drop drawn frames left by earlier runs
 try { fs.readdirSync(RHMI_RES).filter((f) => /^dyn_/.test(f)).forEach((f) => { try { fs.unlinkSync(path.join(RHMI_RES, f)); } catch (e) {} }); } catch (e) {}
 function fileLog(level, msg) {
     try {
         const st = fs.existsSync(LOG_FILE) ? fs.statSync(LOG_FILE) : null;
-        if (st && st.size > 256 * 1024) fs.renameSync(LOG_FILE, LOG_FILE + '.1');
+        if (st && st.size > LOG_MAX) fs.renameSync(LOG_FILE, LOG_FILE + '.1');
         fs.appendFileSync(LOG_FILE, new Date().toISOString() + ' ' + level + ' ' + msg + '\n');
     } catch (e) { /* data dir not writable (host preview) */ }
 }
