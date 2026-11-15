@@ -4,6 +4,16 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.16.0
+
+- **Setting *MG Flasher tester address*** (`0xF2` the head unit, default; `0xF4` the ENET tester). MG Flasher's own app
+  reaches the DME as `0xF4` (its `TesterInterfaceIds.ETHERNET`); the head unit's proxy sends as `0xF2`. On a tester's car
+  MG Flasher switches burbles and Max Cooling, but every write from this app got NRC 69, also with tester present, the
+  ignition read and the pause, so the sender's address is the main difference left. With `0xF4` every MG Flasher request
+  (the prep reads and the write) is sent as `0xF4` and the log says `(as F4)`. The DME's reply goes to that address, so
+  this app may not receive it and show a timeout even when the write worked: check on the car. Not yet tried on a car.
+- The log's start line names the tester address.
+
 ## 10.15.0
 
 - **MG Flasher: read-only probes of the tune's DIDs.** With the other steps before each write, the app now also reads

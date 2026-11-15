@@ -114,10 +114,10 @@ class DiagLink {
      * called by an adapter that is BOTH matched and armed (see adapters.js); on its
      * own it just forwards bytes and reads the answer — it does not decide to send.
      */
-    async sendToDme(sid, data, timeoutMs) {
+    async sendToDme(sid, data, timeoutMs, opts) {
         if (!this.available) return { ok: false, reason: 'no diagnostic link' };
         this.log.info('UDS -> DME ' + hex(sid) + ' ' + bytesToHex(data));
-        const reply = await this.diag.physical(this.dme, sid, data, timeoutMs || 3000, replyTo(sid, data));
+        const reply = await this.diag.physical(this.dme, sid, data, timeoutMs || 3000, replyTo(sid, data), opts);
         if (!reply || !reply.length) return { ok: false, reason: 'timeout' };
         if (reply[0] === 0x7F) return { ok: false, nrc: reply[2], reason: NRC[reply[2]] || ('NRC ' + hex(reply[2])) };
         return { ok: true, sid: reply[0], data: reply.slice(1) };

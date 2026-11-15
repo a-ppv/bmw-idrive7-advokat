@@ -164,7 +164,7 @@ mgu.run({
         if (controller.link) controller.link.onAvailable((on) => controller.refresh().then(() => tune.refresh())
             .then(() => xdrive.refresh()).then(() => (on ? auto.linkUp() : null)).then(repaint).catch((e) => log.error('link', e)));
         await render();
-        log.info('advokat_live_adjustments ' + ctx.spec.version + ' start, tuner=' + settings.get('tuner'));
+        log.info('advokat_live_adjustments ' + ctx.spec.version + ' start, tuner=' + settings.get('tuner') + ', tester address=' + (settings.get('tester_address') || 'f2'));
         log.info('exhaust_control ready (source=' + controller.source + ', adapter=' + controller.adapter.name + ')');
     },
 });

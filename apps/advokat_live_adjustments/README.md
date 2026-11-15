@@ -41,6 +41,11 @@ the DME handles them. Pick the tuning software the car runs in Settings, *Tuning
 and its tabs appear. It ships **Off**, and then nothing at all is sent — no detection, no
 command — and no extra tab appears. Code: `tune.js`.
 
+With MG Flasher picked, *MG Flasher tester address* chooses who the DME sees as the sender: `0xF2` (the head unit's
+own address, the default) or `0xF4` (the ENET tester, the address MG Flasher's own app uses). If the DME refuses
+writes sent as `0xF2`, try `0xF4`; its reply goes to that address, so the app may then show no answer even when the
+write worked.
+
 | Tab | BM3 | MHD | MG Flasher |
 |---|---|---|---|
 | Engine Map | maps 1–4, memory write, confirmed by read-back | `2F 01 <map-1>`, accepted on the DME's echo | slots 1–5 (MG Flasher's 0–4); slots the DME does not offer are greyed out |

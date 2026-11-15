@@ -101,7 +101,15 @@ class CommandDriver {
         this.readback = !!spec.read;
         this.coolingNeedsEngine = !!(spec.cooling && spec.cooling.needsEngine);
         this.verified = !spec.identify;       // nothing to identify = nothing to verify
+        this.sourceAddress = null;            // the tester address requests are sent as: null = the link's own (0xF2)
     }
+
+    /** One request to the DME as the picked tester address; the log says when it is not the default. */
+    _tx(req, timeoutMs) {
+        const src = this.sourceAddress;
+        return this.link.sendToDme(req.sid, req.data, timeoutMs, src ? { sourceAddress: src } : undefined);
+    }
+    get _tag() { return this.sourceAddress ? ' (as ' + this.sourceAddress.toString(16).toUpperCase() + ')' : ''; }
 
     /** One request to the DME; a refusal or silence is an Error carrying the screen's note. */
     async _send(control, value) {
@@ -111,8 +119,8 @@ class CommandDriver {
         const req = c.request(value);
         // every request and the DME's answer go to the app log, so a refused or odd press can be read back
         const sendOnce = async () => {
-            this.log.info(this.label + ' > ' + DME_HEX([req.sid].concat(req.data)));
-            const reply = await this.link.sendToDme(req.sid, req.data);
+            this.log.info(this.label + ' > ' + DME_HEX([req.sid].concat(req.data)) + this._tag);
+            const reply = await this._tx(req);
             this.log.info(this.label + ' < ' + (!reply ? 'no reply' : reply.ok ? DME_HEX([reply.sid].concat(reply.data || []))
                 : reply.nrc != null ? 'NRC ' + reply.nrc.toString(16).toUpperCase().padStart(2, '0') : String(reply.reason || 'failed')));
             return reply;
@@ -120,9 +128,9 @@ class CommandDriver {
         const prep = this.spec.prepare;
         if (prep) {
             for (const q of prep.requests) {
-                this.log.info(this.label + ' prep > ' + DME_HEX([q.sid].concat(q.data)));
+                this.log.info(this.label + ' prep > ' + DME_HEX([q.sid].concat(q.data)) + this._tag);
                 let a;
-                try { a = await this.link.sendToDme(q.sid, q.data); } catch (e) { a = { ok: false, reason: String(e && e.message || e) }; }
+                try { a = await this._tx(q, 1500); } catch (e) { a = { ok: false, reason: String(e && e.message || e) }; }
                 this.log.info(this.label + ' prep < ' + (!a ? 'no reply' : a.ok ? DME_HEX([a.sid].concat(a.data || []))
                     : a.nrc != null ? 'NRC ' + a.nrc.toString(16).toUpperCase().padStart(2, '0') : String(a.reason || 'failed')));
             }

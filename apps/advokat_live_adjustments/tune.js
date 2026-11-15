@@ -72,7 +72,9 @@ class TuneControl {
         const id = this.tuner;
         if (id === 'off') return null;
         if (!this._drivers[id]) this._drivers[id] = createDriver(id, this.link, this.ctx.spec.config || {}, this.log);
-        return this._drivers[id];
+        const d = this._drivers[id];
+        if ('sourceAddress' in d) d.sourceAddress = this.ctx.settings.get('tester_address') === 'f4' ? 0xF4 : null;   // MG Flasher's ENET tester
+        return d;
     }
     /** The DME was identified as running the picked tune (BM3: its ROM matched a known profile). */
     get verified() { const d = this.driver; return !!(d && d.verified); }

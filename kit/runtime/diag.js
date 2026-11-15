@@ -83,7 +83,7 @@ class Diag extends EventEmitter {
         if (!this.quiet) this.log.info('UDS -> ' + hex(target) + ': ' + hex(sid) + ' ' + d.map((x) => hex(x)).join(' '));
         for (let attempt = 0; ; attempt++) {
             const r = await this.signals.call(this.p, 'sendTasuRequest', {
-                sourceAddress: TESTER, targetAddress: target, serviceID: sid, subroutineID: 0,
+                sourceAddress: (opts && opts.sourceAddress) || TESTER, targetAddress: target, serviceID: sid, subroutineID: 0,
                 udsDataLength: d.length, udsData: Buffer.from(d), deadlockTime: 0,
             }, callTimeoutMs);
             const v = r && typeof r === 'object' ? (r.TasuErrorEnum || Object.keys(r).map((k) => r[k]).find((x) => typeof x === 'string')) : r;

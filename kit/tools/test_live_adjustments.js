@@ -670,6 +670,17 @@ async function mgFlasherChecks() {
     assert.strictEqual(lines[10], 'MG Flasher > 2e 69 47 01 b1', 'a refused prep request does not stop the write');
     assert.strictEqual(lines[11], 'MG Flasher < NRC 69');
 
+    // The tester address setting: with 0xF4 every request carries it (and the log says so); by default none does.
+    const seen = [];
+    const f4 = new CommandDriver(MG_FLASHER, { sendToDme: async (sid, data, ms, opts) => { seen.push(opts ? opts.sourceAddress : null); return { ok: true, sid: 0x6E, data: [0x69, 0x45] }; } },
+        { info: (m) => lines.push(m), warn() {} });
+    await f4.setMap(1);
+    assert.ok(seen.length > 1 && seen.every((x) => x === null), 'default: the link sends as its own address');
+    seen.length = 0; lines.length = 0; f4.sourceAddress = 0xF4;
+    await f4.setMap(1);
+    assert.ok(seen.length > 1 && seen.every((x) => x === 0xF4), 'every request, prep and write, as 0xF4');
+    assert.ok(lines.includes('MG Flasher > 2e 69 45 00 ae (as F4)'));
+
     // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
     const plain = await setup('stock', 'mgflasher');
     await plain.tune.setMap(2);
