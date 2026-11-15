@@ -28,6 +28,7 @@ function draw(cv, G, t, v, act) {
     drawPage(cv, G, t, v, act);
     if (v.version) cv.text('v' + v.version, W - 40, G.TOP + 24, 15, t.dim, { align: 'right', font: 'label', literal: true });
     drawLogSend(cv, G, t, v.logSend || {}, act || {});
+    if (v.testerAddr) drawTesterAddr(cv, G, t, v.testerAddr, act || {});
     return cv;
 }
 
@@ -39,6 +40,12 @@ function drawLogSend(cv, G, t, s, act) {
     if (!s.text) return;
     const col = busy ? t.dim : s.ok ? (t.go || '#2fd27a') : (t.warn || '#d29922');
     cv.text(s.text, bx - 16, by + bh / 2 + 6, 17, col, { align: 'right', font: 'label', literal: true });
+}
+
+/** MG Flasher only: the sender address (0xF2 head unit, 0xF4 ENET tester) as a button under "Send log"; a press flips it. */
+function drawTesterAddr(cv, G, t, addr, act) {
+    const bw = 170, bh = 38, bx = W - 40 - bw, by = G.TOP + 34 + 38 + 8;
+    G.button(cv, t, bx, by, bw, bh, 'Sender 0x' + addr.toUpperCase(), act.testerAddr || (() => {}), { key: 'la_tester', color: addr === 'f4' ? RED(t) : undefined, primary: addr === 'f4' });
 }
 
 function drawPage(cv, G, t, v, act) {

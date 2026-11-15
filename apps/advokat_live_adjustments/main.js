@@ -94,6 +94,13 @@ mgu.run({
             xdriveOff: tuneAct(() => xdrive.requestOff()),
             xdriveOn: tuneAct(() => xdrive.requestOn()),
             sendLog: tuneAct(() => logsend.send()),
+            // MG Flasher's sender address, flipped from any page (the Settings entry is the same value)
+            testerAddr: () => {
+                const to = settings.get('tester_address') === 'f4' ? 'f2' : 'f4';
+                settings.set('tester_address', to);
+                log.info('tester address set to ' + to);
+                repaint();
+            },
         };
         const pages = () => pagesFor(tune.features(), xdrive.enabled, xlive.seen);
 
@@ -113,6 +120,7 @@ mgu.run({
             v.tune = tune.view();
             v.version = ctx.spec.version;
             v.logSend = logsend.view();
+            v.testerAddr = tune.tuner === 'mgflasher' ? (settings.get('tester_address') === 'f4' ? 'f4' : 'f2') : null;
             if (page === 'xDrive' || page === 'xDrive live') {
                 const r = xdrive.tick();             // DBE1 read now and then, only on this tab
                 if (r) r.then(repaint).catch((e) => log.error('xdrive', e));

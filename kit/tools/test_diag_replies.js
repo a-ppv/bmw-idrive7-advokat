@@ -84,6 +84,15 @@ const echo = (sid, data) => [sid + 0x40].concat(data);
         button: (cv, t, x, y, w, h, label, run, o) => buttons.push([label, !!o.busy]) }), anyOf({}), c.view(), {});
     assert.deepStrictEqual(buttons, [['Open', true], ['Close', true], ['OEM', false], ['Drive mode', true], ['Send log', false]],
         'only OEM (and Send log, which sends no command to the car) stays pressable while a command is in flight');
+    // The MG Flasher sender-address button: drawn only with MG Flasher picked, labelled with the current address, a press flips it.
+    const drawn = (view, act) => { const out = []; UI.draw(anyOf({ own: true }), anyOf({ TOP: 60, BOTTOM: 500, MARGIN: 12, pageBottom: () => 500,
+        button: (cv, t, x, y, w, h, label, run) => out.push([label, run]) }), anyOf({}), view, act); return out; };
+    assert.ok(!drawn(c.view(), {}).some(([l]) => /^Sender/.test(l)), 'the sender button shows without MG Flasher');
+    let flips = 0;
+    assert.ok(drawn(Object.assign({}, c.view(), { testerAddr: 'f2' }), {}).some(([l]) => l === 'Sender 0xF2'));
+    const f4btn = drawn(Object.assign({}, c.view(), { testerAddr: 'f4' }), { testerAddr: () => { flips++; } }).find(([l]) => l === 'Sender 0xF4');
+    assert.ok(f4btn, 'the label follows the address');
+    f4btn[1](); assert.strictEqual(flips, 1);
     await later(10);
     assert.deepStrictEqual(b.sent.filter((s) => s[0] === 0x2F), [OPEN], 'a second flap command went out while one was in flight');
     b.d.emit('frame', { ecu: 0x12, uds: [0x6F, 0x60, 0xFD, 0x03, 0x03, 0xE8] });

@@ -4,6 +4,12 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.17.0
+
+- **Sender button on every page.** With MG Flasher picked, a button under *Send log* in the top-right corner shows the
+  tester address in use (`Sender 0xF2`, or `Sender 0xF4` in red) and one press flips it. It changes the same setting as
+  *MG Flasher tester address* in Settings. Not shown for the other tunes.
+
 ## 10.16.0
 
 - **Setting *MG Flasher tester address*** (`0xF2` the head unit, default; `0xF4` the ENET tester). MG Flasher's own app
