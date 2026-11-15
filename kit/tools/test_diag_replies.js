@@ -82,7 +82,8 @@ const echo = (sid, data) => [sid + 0x40].concat(data);
     const buttons = [];
     UI.draw(anyOf({ own: true }), anyOf({ TOP: 60, BOTTOM: 500, MARGIN: 12, pageBottom: () => 500,
         button: (cv, t, x, y, w, h, label, run, o) => buttons.push([label, !!o.busy]) }), anyOf({}), c.view(), {});
-    assert.deepStrictEqual(buttons, [['Open', true], ['Close', true], ['OEM', false], ['Drive mode', true]], 'only OEM stays pressable while a command is in flight');
+    assert.deepStrictEqual(buttons, [['Open', true], ['Close', true], ['OEM', false], ['Drive mode', true], ['Send log', false]],
+        'only OEM (and Send log, which sends no command to the car) stays pressable while a command is in flight');
     await later(10);
     assert.deepStrictEqual(b.sent.filter((s) => s[0] === 0x2F), [OPEN], 'a second flap command went out while one was in flight');
     b.d.emit('frame', { ecu: 0x12, uds: [0x6F, 0x60, 0xFD, 0x03, 0x03, 0xE8] });

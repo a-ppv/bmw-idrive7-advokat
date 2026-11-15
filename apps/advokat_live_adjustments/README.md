@@ -198,6 +198,22 @@ and subsequent normal reads, including `uds_request`/`uds_result` exchange IDs. 
 records deliberately omit VIN, ECU serial numbers and arbitrary vehicle/config objects.
 Review the rest of the app log for personal information before sharing it.
 
+## Send log
+
+The **Send log** button, top-right under the version on every page, uploads the app's log to an Azure Function so it
+can be read for analysis. Nothing is sent but on a press. It sends the previous log (`advokat_live_adjustments.log.1`)
+and the current one (`advokat_live_adjustments.log`), each as its own request; a file over 19 MB goes as its last 19 MB.
+The log holds the app's start line (version, tuning software), every request to the DME and its reply, and errors:
+no VIN or name, and the timestamps and commands of that car.
+
+The line left of the button says what happened: *Sent 2 files · n MB*, *No internet*, *Timed out*, *Rejected · wrong
+token*, *Too large for the server*, *Server error (HTTP n)*, *No log to send* or *Upload is not set up*.
+
+It needs the internet: `app.json` has `"internet": true`, which the Store's uplink (`mgu-uplink`) gives while it is
+installed and online. The address and token are `config.logUpload` in `app.json`; the function is described in the
+owner's `azure/` folder (not in this repository: `README.md` there). The Settings tab is drawn by the kit and has no
+button.
+
 ## Build and test
 
 ```sh

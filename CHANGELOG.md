@@ -4,6 +4,13 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.13.0
+
+- **Send log button** on every page (top-right, under the version): uploads the previous and the current app log to an
+  Azure Function, and shows the result (sent / no internet / timed out / rejected / too large / server error).
+  New file `logsend.js`; `app.json` gains `"internet": true` and `config.logUpload`; `kit/tools/build.py` writes
+  `"mguInternet": true` into the built `package.json` for an app that says `internet`. Test: `kit/tools/test_logsend.js`.
+
 ## 10.12.0
 
 - **Every diagnostic request and reply is logged.** For MG Flasher and MHD the app log gets one line per request and per

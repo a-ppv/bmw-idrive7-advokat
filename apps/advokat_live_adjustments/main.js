@@ -31,6 +31,7 @@ const { XDriveControl } = require('./xdrive');
 const { XDriveLive } = require('./xdrive_live');
 const Car = require('./kit/car');
 const { AutoFlap } = require('./auto');
+const { LogSender } = require('./logsend');
 
 const FES = 'de.bmw.infotainment.drivingexcitement.FES';
 const RPM_STALE_MS = 5000;          // the Close rpm guard: an engine speed older than this is none
@@ -61,6 +62,7 @@ mgu.run({
         const tune = new TuneControl(ctx, { rpm: () => { const d = car.data(); return d.demo ? null : d.rpm; } });
         const xdrive = new XDriveControl(ctx, car);
         const xlive = new XDriveLive(ctx, car);
+        const logsend = new LogSender(ctx);
         let angle = 0.18;
         let page = 'Exhaust Flap';          // by name: the tune's tabs come and go with the setting
         let loop = null;
@@ -91,6 +93,7 @@ mgu.run({
             asd: (on) => tuneAct(() => tune.setAsd(on)),
             xdriveOff: tuneAct(() => xdrive.requestOff()),
             xdriveOn: tuneAct(() => xdrive.requestOn()),
+            sendLog: tuneAct(() => logsend.send()),
         };
         const pages = () => pagesFor(tune.features(), xdrive.enabled, xlive.seen);
 
@@ -109,6 +112,7 @@ mgu.run({
             v.page = page;
             v.tune = tune.view();
             v.version = ctx.spec.version;
+            v.logSend = logsend.view();
             if (page === 'xDrive' || page === 'xDrive live') {
                 const r = xdrive.tick();             // DBE1 read now and then, only on this tab
                 if (r) r.then(repaint).catch((e) => log.error('xdrive', e));

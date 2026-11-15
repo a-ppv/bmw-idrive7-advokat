@@ -27,7 +27,18 @@ const W = 1600, H = 520;
 function draw(cv, G, t, v, act) {
     drawPage(cv, G, t, v, act);
     if (v.version) cv.text('v' + v.version, W - 40, G.TOP + 24, 15, t.dim, { align: 'right', font: 'label', literal: true });
+    drawLogSend(cv, G, t, v.logSend || {}, act || {});
     return cv;
+}
+
+/** The "Send log" button under the version in the top-right corner of every page, its result to its left. */
+function drawLogSend(cv, G, t, s, act) {
+    const bw = 170, bh = 38, bx = W - 40 - bw, by = G.TOP + 34;
+    const busy = s.state === 'sending';
+    G.button(cv, t, bx, by, bw, bh, 'Send log', act.sendLog || (() => {}), { key: 'la_sendlog', busy });
+    if (!s.text) return;
+    const col = busy ? t.dim : s.ok ? (t.go || '#2fd27a') : (t.warn || '#d29922');
+    cv.text(s.text, bx - 16, by + bh / 2 + 6, 17, col, { align: 'right', font: 'label', literal: true });
 }
 
 function drawPage(cv, G, t, v, act) {
