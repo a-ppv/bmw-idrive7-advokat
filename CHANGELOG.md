@@ -4,6 +4,13 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.15.0
+
+- **MG Flasher: read-only probes of the tune's DIDs.** With the other steps before each write, the app now also reads
+  `22 69 45`, `22 69 46` and `22 69 47` (map slot, burble slot, Max Cooling) and logs the answers (`MG Flasher prep < ...`).
+  A value means the DME knows the DID and holds something there; NRC 31 means it does not know it; NRC 69 means the
+  refusal comes before the write. Nothing is changed on the car by a read. Added to find out why every write got NRC 69.
+
 ## 10.14.0
 
 - **MG Flasher: the steps the tune's own app takes before a write.** Before each map, burble or Max Cooling write the app

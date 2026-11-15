@@ -75,10 +75,12 @@ const MG_FLASHER = {
     // 6E + the DID (the value and checksum are not echoed)
     ack: (r, q) => r.sid === 0x6E && r.data && r.data[0] === q.data[0] && r.data[1] === q.data[1],
     retry: { nrc: 0x21, times: 20, delayMs: 200 },
-    // what the app does before each write: tester present to the DME, a read of DID 0x5820 (its ignition state), 200 ms
-    // pause. Replies are only logged: a refusal here does not stop the write. (The app: InitializeModule with tester
+    // what the app does before each write: tester present to the DME, a read of DID 0x5820 (its ignition state), three
+    // read-only probes, 200 ms pause. Replies are only logged: a refusal here does not stop the write. (The app: InitializeModule with tester
     // present, GetIgnitionState, Thread.Sleep(200), then WriteDataByIdentifier.)
-    prepare: { requests: [{ sid: 0x3E, data: [0x00] }, { sid: 0x22, data: [0x58, 0x20] }], settleMs: 200 },
+    prepare: { requests: [{ sid: 0x3E, data: [0x00] }, { sid: 0x22, data: [0x58, 0x20] },
+        // read-only probes of the tune's own DIDs (map, burble, Max Cooling): does the DME know them, and what do they hold
+        { sid: 0x22, data: [0x69, 0x45] }, { sid: 0x22, data: [0x69, 0x46] }, { sid: 0x22, data: [0x69, 0x47] }], settleMs: 200 },
     // the Custom Code's own refusals: the app names the status words 0x6969 and 0x9696 (CustomCode_WBDI_*) the same way
     nrcNames: { 0x69: 'invalid DID or data', 0x96: 'incorrect checksum' },
     identify: null,    // the Custom Code version: not known how the app reads it

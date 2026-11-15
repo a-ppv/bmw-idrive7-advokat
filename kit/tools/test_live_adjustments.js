@@ -661,14 +661,14 @@ async function mgFlasherChecks() {
     await logged.setMap(3);
     // before the write: tester present and a read of DID 0x5820 (ignition state), as MG Flasher's app does; only logged
     assert.deepStrictEqual(lines.filter((l) => !l.includes('prep')), ['MG Flasher > 2e 69 45 02 b0', 'MG Flasher < 6e 69 45']);
-    assert.deepStrictEqual(lines.filter((l) => l.includes('prep >')), ['MG Flasher prep > 3e 00', 'MG Flasher prep > 22 58 20']);
-    assert.strictEqual(lines.indexOf('MG Flasher > 2e 69 45 02 b0'), 4, 'the write comes after both prep requests and their replies');
+    assert.deepStrictEqual(lines.filter((l) => l.includes('prep >')), ['MG Flasher prep > 3e 00', 'MG Flasher prep > 22 58 20', 'MG Flasher prep > 22 69 45', 'MG Flasher prep > 22 69 46', 'MG Flasher prep > 22 69 47']);
+    assert.strictEqual(lines.indexOf('MG Flasher > 2e 69 45 02 b0'), 10, 'the write comes after both prep requests and their replies');
     lines.length = 0;
     logged.link.sendToDme = async () => ({ ok: false, nrc: 0x69, reason: 'NRC 69' });
     await assert.rejects(() => logged.setCooling(true), /NRC 69/);
     assert.deepStrictEqual(lines.slice(0, 4), ['MG Flasher prep > 3e 00', 'MG Flasher prep < NRC 69', 'MG Flasher prep > 22 58 20', 'MG Flasher prep < NRC 69']);
-    assert.strictEqual(lines[4], 'MG Flasher > 2e 69 47 01 b1', 'a refused prep request does not stop the write');
-    assert.strictEqual(lines[5], 'MG Flasher < NRC 69');
+    assert.strictEqual(lines[10], 'MG Flasher > 2e 69 47 01 b1', 'a refused prep request does not stop the write');
+    assert.strictEqual(lines[11], 'MG Flasher < NRC 69');
 
     // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
     const plain = await setup('stock', 'mgflasher');
