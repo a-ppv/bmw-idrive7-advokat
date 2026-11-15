@@ -7,10 +7,14 @@
  * The endpoint takes MAX_BYTES per request; a longer file is cut to its last MAX_BYTES (the end of a log is
  * what matters) and the status line says so. The status says what happened and why:
  * Sent / No internet / Timed out / Rejected / Too large / Server error. Nothing is sent but on a press.
+ *
+ * DNS: the unit's own resolver does not reach the internet. mgu-uplink gives an allowed app its own DNS servers in
+ * <dataDir>/uplink.json while it is online, and the host is looked up through those (leaseDns, lookupVia).
  */
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const dns = require('dns');
 const { URL } = require('url');
 
 const MAX_BYTES = 19 * 1024 * 1024;          // the endpoint refuses more than 20 MB a request
@@ -40,14 +44,44 @@ function readTail(file) {
     }
 }
 
-/** POST one body: resolves { status } or rejects { code } ('TIMEOUT', or the socket's error code). */
-function post(cfg, device, body) {
+/** The DNS servers of the uplink's lease for this app (mgu-uplink writes <dataDir>/uplink.json while it is online),
+ * or null: then the system resolver is used. The unit's own resolver does not reach the internet, so an app that
+ * may use the uplink has to resolve names through these servers itself. */
+function leaseDns(dataDir) {
+    for (const f of [path.join(dataDir, 'uplink.json'), '/run/mgu-uplink/lease.json']) {
+        try {
+            const d = JSON.parse(fs.readFileSync(f, 'utf8')).dns;
+            if (Array.isArray(d) && d.length) return d;
+        } catch (e) { /* no lease there */ }
+    }
+    return null;
+}
+
+/** A https "lookup" that asks the given DNS servers (IPv4) instead of the system resolver. */
+function lookupVia(servers) {
+    const resolver = new dns.Resolver();
+    resolver.setServers(servers);
+    return (host, opts, cb) => {
+        if (typeof opts === 'function') cb = opts;
+        resolver.resolve4(host, (err, addrs) => {
+            if (err) return cb(err);
+            if (opts && opts.all) return cb(null, addrs.map((a) => ({ address: a, family: 4 })));
+            cb(null, addrs[0], 4);
+        });
+    };
+}
+
+/** POST one body: resolves { status } or rejects { code } ('TIMEOUT', or the socket's error code).
+ * servers: DNS servers to resolve the host with (the uplink's), or none for the system resolver. */
+function post(cfg, device, body, servers) {
     return new Promise((resolve, reject) => {
         const u = new URL(cfg.url);
-        const req = https.request({
+        const opts = {
             method: 'POST', hostname: u.hostname, port: u.port || 443, path: u.pathname + u.search,
             headers: { 'x-token': cfg.token, 'x-device': device, 'content-type': 'application/octet-stream', 'content-length': body.length },
-        }, (res) => {
+        };
+        if (servers && servers.length) opts.lookup = lookupVia(servers);
+        const req = https.request(opts, (res) => {
             res.resume();
             res.on('end', () => resolve({ status: res.statusCode }));
         });
@@ -93,12 +127,14 @@ class LogSender {
         this.state = 'sending';
         this.ok = false;
         this.text = 'Sending…';
+        const servers = leaseDns(dataDir);
+        log.info('log upload: dns ' + (servers ? servers.join(',') : 'system'));
         let bytes = 0, cut = false;
         for (const f of files) {
             log.info('log upload: ' + f.tag + ' ' + f.tail.buf.length + ' bytes' + (f.tail.cut ? ' (cut to the last ' + MAX_BYTES + ')' : ''));
             let r;
             try {
-                r = await this.post(cfg, 'v' + spec.version + '-' + f.tag, f.tail.buf);
+                r = await this.post(cfg, 'v' + spec.version + '-' + f.tag, f.tail.buf, servers);
             } catch (e) {
                 if (e && e.message) log.info('log upload: ' + e.message);      // the detail stays in the log, not on the screen
                 return finish(false, failText(0, e && e.code));
@@ -113,4 +149,4 @@ class LogSender {
     }
 }
 
-module.exports = { LogSender, readTail, failText, MAX_BYTES };
+module.exports = { LogSender, readTail, failText, leaseDns, lookupVia, MAX_BYTES };

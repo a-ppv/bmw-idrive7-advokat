@@ -8,7 +8,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { LogSender, readTail, failText, MAX_BYTES } = require('../../apps/advokat_live_adjustments/logsend');
+const { LogSender, readTail, failText, leaseDns, MAX_BYTES } = require('../../apps/advokat_live_adjustments/logsend');
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logsend-'));
 const lines = [];
@@ -98,6 +98,26 @@ const clean = () => fs.readdirSync(dir).forEach((f) => fs.unlinkSync(path.join(d
     assert.strictEqual(readTail(path.join(dir, 'nothing')), null);
     fs.writeFileSync(path.join(dir, 'empty'), '');
     assert.strictEqual(readTail(path.join(dir, 'empty')), null);
+
+    // the uplink's DNS: the lease's servers go to the POST; no lease means the system resolver
+    clean();
+    fs.writeFileSync(path.join(dir, 'app.log'), 'line\n');
+    const seen = [];
+    const stub = async (c, d, b, servers) => { seen.push(servers); return { status: 201 }; };
+    const hostLease = fs.existsSync('/run/mgu-uplink/lease.json');      // true only on the car
+    if (!hostLease) {
+        assert.strictEqual(leaseDns(dir), null);
+        await new LogSender(mk(), stub).send();
+        assert.deepStrictEqual(seen, [null]);
+    }
+    fs.writeFileSync(path.join(dir, 'uplink.json'), JSON.stringify({ interface: 'wlan0', dns: ['10.80.151.102'] }));
+    assert.deepStrictEqual(leaseDns(dir), ['10.80.151.102']);
+    seen.length = 0;
+    await new LogSender(mk(), stub).send();
+    assert.deepStrictEqual(seen, [['10.80.151.102']]);
+    assert.ok(lines.some((l) => l === 'log upload: dns 10.80.151.102'));
+    fs.writeFileSync(path.join(dir, 'uplink.json'), '{"dns": []}');
+    if (!hostLease) assert.strictEqual(leaseDns(dir), null);
 
     clean();
     fs.rmdirSync(dir);

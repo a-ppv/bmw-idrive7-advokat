@@ -4,6 +4,14 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.13.1
+
+- **Send log resolves the server's name through the uplink.** On the car the first test said "No internet"
+  (`getaddrinfo ENOTFOUND`): the unit's own resolver (127.0.0.1) does not reach the internet, and `mgu-uplink` hands
+  an allowed app its own DNS servers in `<dataDir>/uplink.json` (`/run/mgu-uplink/lease.json` for everyone). `logsend.js`
+  now reads them and looks the host up through them (`lookupVia`); with no lease it uses the system resolver as before.
+  The log gets a line `log upload: dns <servers|system>`. Test: `kit/tools/test_logsend.js`.
+
 ## 10.13.0
 
 - **Send log button** on every page (top-right, under the version): uploads the previous and the current app log to an
