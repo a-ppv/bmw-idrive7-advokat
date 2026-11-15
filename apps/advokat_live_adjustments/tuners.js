@@ -70,11 +70,15 @@ const mgWrite = (did, value) => ({ sid: 0x2E, data: [did >> 8, did & 0xFF, value
 const MG_FLASHER = {
     id: 'mgflasher', label: 'MG Flasher',
     map: { slots: 5, request: (n) => mgWrite(0x6945, n - 1) },
-    burbles: { slots: 6, request: (slot) => mgWrite(0x6946, slot) },
+    burbles: { slots: 5, request: (slot) => mgWrite(0x6946, slot) },
     cooling: { request: (on) => mgWrite(0x6947, on ? 1 : 0), needsEngine: false },
     // 6E + the DID (the value and checksum are not echoed)
     ack: (r, q) => r.sid === 0x6E && r.data && r.data[0] === q.data[0] && r.data[1] === q.data[1],
     retry: { nrc: 0x21, times: 20, delayMs: 200 },
+    // what the app does before each write: tester present to the DME, a read of DID 0x5820 (its ignition state), 200 ms
+    // pause. Replies are only logged: a refusal here does not stop the write. (The app: InitializeModule with tester
+    // present, GetIgnitionState, Thread.Sleep(200), then WriteDataByIdentifier.)
+    prepare: { requests: [{ sid: 0x3E, data: [0x00] }, { sid: 0x22, data: [0x58, 0x20] }], settleMs: 200 },
     // the Custom Code's own refusals: the app names the status words 0x6969 and 0x9696 (CustomCode_WBDI_*) the same way
     nrcNames: { 0x69: 'invalid DID or data', 0x96: 'incorrect checksum' },
     identify: null,    // the Custom Code version: not known how the app reads it
@@ -111,6 +115,17 @@ class CommandDriver {
                 : reply.nrc != null ? 'NRC ' + reply.nrc.toString(16).toUpperCase().padStart(2, '0') : String(reply.reason || 'failed')));
             return reply;
         };
+        const prep = this.spec.prepare;
+        if (prep) {
+            for (const q of prep.requests) {
+                this.log.info(this.label + ' prep > ' + DME_HEX([q.sid].concat(q.data)));
+                let a;
+                try { a = await this.link.sendToDme(q.sid, q.data); } catch (e) { a = { ok: false, reason: String(e && e.message || e) }; }
+                this.log.info(this.label + ' prep < ' + (!a ? 'no reply' : a.ok ? DME_HEX([a.sid].concat(a.data || []))
+                    : a.nrc != null ? 'NRC ' + a.nrc.toString(16).toUpperCase().padStart(2, '0') : String(a.reason || 'failed')));
+            }
+            await new Promise((done) => setTimeout(done, prep.settleMs || 0));
+        }
         let r = await sendOnce();
         const retry = this.spec.retry;     // the DME is busy (NRC 0x21): ask again, as the tune's own app does
         for (let i = 0; retry && r && r.nrc === retry.nrc && i < retry.times; i++) {

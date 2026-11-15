@@ -603,7 +603,7 @@ async function mgFlasherChecks() {
     const real = await setup('mgreal', 'mgflasher', true, 0);              // engine stopped: Max Cooling is not gated
     assert.deepStrictEqual(real.tune.features(), { map: true, cooling: true, burbles: true, asd: false });
     assert.strictEqual(real.tune.view().mapSlots, 5);
-    assert.strictEqual(real.tune.view().burbleSlots, 6);
+    assert.strictEqual(real.tune.view().burbleSlots, 5);
     assert.strictEqual(real.tune.view().readback, false);
     assert.deepStrictEqual(real.d.calls, [], 'nothing is read before the addresses are known');
     await real.tune.setMap(3);
@@ -619,21 +619,21 @@ async function mgFlasherChecks() {
     assert.strictEqual(real.d.calls.at(-1), '2e 69 46 01 b0');             // 0x46 + 0x69 + 1
     assert.strictEqual(real.tune.burbles, 1);
     assert.strictEqual(real.tune.note, 'Burbles slot 1 · accepted by the DME');
-    await real.tune.setBurbleSlot(5);
-    assert.strictEqual(real.d.calls.at(-1), '2e 69 46 05 b4');
+    await real.tune.setBurbleSlot(4);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 46 04 b3');
     await real.tune.setCooling(true);
     assert.strictEqual(real.d.calls.at(-1), '2e 69 47 01 b1');
     assert.strictEqual(real.tune.cooling, 'ON');
     await real.tune.setCooling(false);
     assert.strictEqual(real.d.calls.at(-1), '2e 69 47 00 b0');
     real.d.calls.length = 0;
-    await real.tune.setMap(6); await real.tune.setMap(0); await real.tune.setBurbleSlot(6); await real.tune.setBurbleSlot(-1);
+    await real.tune.setMap(6); await real.tune.setMap(0); await real.tune.setBurbleSlot(5); await real.tune.setBurbleSlot(-1);
     await real.tune.applyBurbles(false); await real.tune.setAsd(true);     // not this tune's controls
     assert.deepStrictEqual(real.d.calls, [], 'an out-of-range slot was sent');
 
     // The DME is busy (NRC 21): the request is sent again, as MG Flasher's app does; a DME that never answers gives up.
     const busy = await setup('mgreal', 'mgflasher');
-    busy.tune._drivers.mgflasher = new CommandDriver(Object.assign({}, MG_FLASHER, { retry: { nrc: 0x21, times: 20, delayMs: 1 } }), busy.d.link);
+    busy.tune._drivers.mgflasher = new CommandDriver(Object.assign({}, MG_FLASHER, { prepare: null, retry: { nrc: 0x21, times: 20, delayMs: 1 } }), busy.d.link);
     const send = busy.d.link.sendToDme;
     let left = 2;
     busy.d.link.sendToDme = async (sid, data) => (left-- > 0 ? { ok: false, nrc: 0x21, reason: 'NRC 21' } : send(sid, data));
@@ -659,12 +659,16 @@ async function mgFlasherChecks() {
     const lines = [];
     const logged = new CommandDriver(MG_FLASHER, dme('mgreal').link, { info: (m) => lines.push(m), warn() {} });
     await logged.setMap(3);
-    assert.deepStrictEqual(lines, ['MG Flasher > 2e 69 45 02 b0', 'MG Flasher < 6e 69 45']);
+    // before the write: tester present and a read of DID 0x5820 (ignition state), as MG Flasher's app does; only logged
+    assert.deepStrictEqual(lines.filter((l) => !l.includes('prep')), ['MG Flasher > 2e 69 45 02 b0', 'MG Flasher < 6e 69 45']);
+    assert.deepStrictEqual(lines.filter((l) => l.includes('prep >')), ['MG Flasher prep > 3e 00', 'MG Flasher prep > 22 58 20']);
+    assert.strictEqual(lines.indexOf('MG Flasher > 2e 69 45 02 b0'), 4, 'the write comes after both prep requests and their replies');
     lines.length = 0;
     logged.link.sendToDme = async () => ({ ok: false, nrc: 0x69, reason: 'NRC 69' });
     await assert.rejects(() => logged.setCooling(true), /NRC 69/);
-    assert.strictEqual(lines[0], 'MG Flasher > 2e 69 47 01 b1');
-    assert.strictEqual(lines[1], 'MG Flasher < NRC 69');
+    assert.deepStrictEqual(lines.slice(0, 4), ['MG Flasher prep > 3e 00', 'MG Flasher prep < NRC 69', 'MG Flasher prep > 22 58 20', 'MG Flasher prep < NRC 69']);
+    assert.strictEqual(lines[4], 'MG Flasher > 2e 69 47 01 b1', 'a refused prep request does not stop the write');
+    assert.strictEqual(lines[5], 'MG Flasher < NRC 69');
 
     // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
     const plain = await setup('stock', 'mgflasher');

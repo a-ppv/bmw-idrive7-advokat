@@ -4,6 +4,15 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.14.0
+
+- **MG Flasher: the steps the tune's own app takes before a write.** Before each map, burble or Max Cooling write the app
+  now sends tester present (`3E 00`), reads DID `0x5820` (the DME's ignition state) and waits 200 ms, as the Android app
+  does (its `InitializeModule` with tester present, `GetIgnitionState`, `Thread.Sleep(200)`). The replies are only
+  logged (`MG Flasher prep > 3e 00`, `MG Flasher prep < ...`); a refusal there does not stop the write. This is a test
+  for the NRC 69 seen on a tester's car, where every write was refused: not yet tried on a car.
+- **Burbles: five slots**, not six. The tune's own app shows slots 0 to 4 (OEM, App Slider, Level 1 to 3).
+
 ## 10.13.1
 
 - **Send log resolves the server's name through the uplink.** On the car the first test said "No internet"
