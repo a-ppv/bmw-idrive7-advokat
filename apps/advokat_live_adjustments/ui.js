@@ -219,14 +219,18 @@ function drawBurbles(cv, G, t, m, act, bottom) {
     return cv;
 }
 
+/** MG Flasher's five burble slots, as its own app names them (slot 0 first). */
+const BURBLE_NAMES = ['OEM', 'Slider', 'Level 1', 'Level 2', 'Level 3'];
+const burbleName = (k, n) => (n === BURBLE_NAMES.length ? BURBLE_NAMES[k] : String(k));
+
 function drawBurbleSlots(cv, G, t, m, act, bottom) {
     const cy = G.TOP + (bottom - G.TOP - 96) / 2 - 20;
     const known = typeof m.burbles === 'number';
-    cv.text(known ? String(m.burbles) : '–', W / 2, cy + 30, 112, known ? t.text : t.dim, { align: 'center', font: 'bold', spacing: 4 });
-    cv.text('Burble slot · 0 is the first', W / 2, cy + 74, 18, t.dim, { align: 'center', font: 'label', spacing: 1 });
+    cv.text(known ? burbleName(m.burbles, m.burbleSlots) : '–', W / 2, cy + 30, 112, known ? t.text : t.dim, { align: 'center', font: 'bold', spacing: 4 });
+    cv.text('Burbles', W / 2, cy + 74, 18, t.dim, { align: 'center', font: 'label', spacing: 1 });
     noteLine(cv, G, t, m, bottom);
     const slots = Array.from({ length: m.burbleSlots }, (_, i) => i);
-    buttonRow(cv, G, t, slots.map((k) => [String(k), act.burbleSlot && act.burbleSlot(k), m.burbles === k, !offered(m.validBurbles, k)]),
+    buttonRow(cv, G, t, slots.map((k) => [burbleName(k, m.burbleSlots), act.burbleSlot && act.burbleSlot(k), m.burbles === k, !offered(m.validBurbles, k)]),
         bottom, rowButtonW(slots.length), m.busy, 'la_burbs');
     return cv;
 }

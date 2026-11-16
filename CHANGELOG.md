@@ -4,6 +4,12 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.17.1
+
+- **Burble buttons carry the tune's names.** With MG Flasher the five slots read OEM, Slider, Level 1, Level 2 and
+  Level 3 (slots 0 to 4), on the buttons and in the big display, instead of the numbers 0 to 4. Other slot counts keep
+  numbers.
+
 ## 10.17.0
 
 - **Sender button on every page.** With MG Flasher picked, a button under *Send log* in the top-right corner shows the
